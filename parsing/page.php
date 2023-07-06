@@ -126,40 +126,13 @@ class Page
 		return isset($tail[1]) ? str_contains($tail[1], '.') : false;
 	}
 
-	public function getChainOfDirs($link)
-	{
-		// определяем цепочку директорий, к-е необходимо создать для размещения текущей страницы
-		$chainOfDirs = [];
-		if ($this->isFileLink($link)) {
-			$link = preg_replace('#[^/]+$#su', '', $link);
-		}
-		$dirs = array_diff(explode('/', $link), ['']);
-		//preg_match_all('#(/[^/]+)#su', $url, $dirs);
-		$i = 0;
-		foreach($dirs as $dir)
-		{
-			if(!isset($chainOfDirs[$i-1])) {
-				$chainOfDirs[$i] = '/' . $dir . '/';
-			} else {
-				$chainOfDirs[$i] = $chainOfDirs[$i-1] . $dir . '/';
-			}
-			$i++;
-		}
-		return $chainOfDirs;
-	}
-
 	public function setDir($link)
 	{
-		// если это файл, то обрезаем имя файла, оставив ссылку на директорию
+		//создаём директорию для последующего размещения файлов (index.php, картинок, стилей)
+		//если задана ссылка на файл, то обрезаем окончание, оставив ссылку на директорию
 		$linkDir = $this->isFileLink($link) ? preg_replace('#[^/]+$#su', '', $link) : $link;
-		// создаём цепочку директорий для размещения текущей страницы
-		if(!is_dir($this->homedir . $linkDir)) {
-			$dirs = $this->getChainOfDirs($linkDir);
-			foreach($dirs as $dir) {
-				if(!is_dir($this->homedir . $dir)) {
-					mkdir($this->homedir . $dir);
-				}
-			}
+		if (!mkdir($this->homedir . $linkDir, 0777, true)) {
+			die ('Ошибка: директория ' . $this->homedir . $linkDir . ' не была создана!');
 		}
 	}
 
