@@ -27,6 +27,24 @@ class Page
 		$this->homedir = $homedir;
 	}
 
+	public function getTitle()
+	{
+		preg_match('#<h1>(.+?)</h1>#su', $this->getFile($this->link), $title);
+		return $title[1];
+	}
+
+	public function isOutLink($url)
+	{
+		return substr($url, 0, 4) == 'http';
+	}
+
+	public function isFileLink($link)
+	{
+		// является ли ссылкой на файл (или это директория)
+		preg_match('#([^/]+)$#su', $link, $tail);
+		return isset($tail[1]) ? str_contains($tail[1], '.') : false;
+	}
+
 	public function getFile($link)
 	{
 		$curl = (new CurlSet($this->mainpage . $link))->curl;
@@ -41,14 +59,13 @@ class Page
 	public function isValideLink($link)
 	{
 		//является ли ссылкой на внутреннюю страницу
-		if (substr($link, 0, 12) == '//www.spr.ru') {
+		if (substr($link, 0, 7) == 'mailto:') {
 			return false;
 		} elseif ($link[0] == '#' or $link[0] == '"') {
 			return false;
 		} elseif (substr($link, 0, 4) == 'http') {
 			return false;
-		}
-		else {
+		} else {
 			return true;
 		}
 	}
@@ -109,23 +126,6 @@ class Page
 		return array_unique($innerStyleLinks);
 	}
 
-	public function getTitle()
-	{
-		preg_match('#<h1>(.+?)</h1>#su', $this->getFile($this->link), $title);
-		return $title[1];
-	}
-
-	public function isOutLink($url)
-	{
-		return substr($url, 0, 4) == 'http';
-	}
-
-	public function isFileLink($link) // является ли ссылкой на файл (или это директория)
-	{
-		preg_match('#([^/]+)$#su', $link, $tail);
-		return isset($tail[1]) ? str_contains($tail[1], '.') : false;
-	}
-
 	public function setDir($link)
 	{
 		//создаём директорию для последующего размещения файлов (index.php, картинок, стилей)
@@ -139,7 +139,7 @@ class Page
 	public function normalizeFileLink($link)
 	{
 		// обрезаем окончание адреса, типа ?v=23
-		$normalizedLink = preg_replace('#(\?v=\d+)#su', '', $link);
+		$normalizedLink = $this->cutVersionInUrl($link);
 		// очищаем адрес от конструкции /&/, если это картинка
 		if (str_contains($normalizedLink, '/&')) {
 			preg_match('#(.+)/&(.+)#su', $normalizedLink, $match);
@@ -151,7 +151,7 @@ class Page
 	public function cutVersionInUrl($url)
 	{
 		// обрезаем окончание адреса, типа ?v=23
-		return preg_replace('#(\?v=\d+)#su', '', $url);
+		return preg_replace('#\?.+$#su', '', $url);
 	}
 
 	public function normalizeImageUrl($url)
@@ -203,7 +203,7 @@ class Page
 		$imageLinks = $this->getInnerImageLinks();
 		foreach ($imageLinks as $imageLink)
 		{
-			$file = $this->getFile($imageLink);
+			$file = file_get_contents($this->mainpage . $imageLink);
 			$normalizedImageLink = $this->normalizeFileLink($imageLink);
 			$this->setDir($normalizedImageLink);
 			if (!is_file($this->homedir . $normalizedImageLink)) {
